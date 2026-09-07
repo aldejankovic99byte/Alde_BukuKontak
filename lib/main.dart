@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 
 void main() {
@@ -21,12 +22,12 @@ class MyApp extends StatelessWidget {
   }
 }
 
-// ================= MODEL KONTAK =================
+// ================= MODEL KONTAK (TUGAS 4) =================
 class Kontak {
   String nama;
   String email;
   String telepon;
-  String? kategori; // Properti Nullable (Tugas 4)
+  String? kategori; // Nullable
   bool favorit;
 
   Kontak({
@@ -50,6 +51,9 @@ class _HalamanBerandaState extends State<HalamanBeranda> with SingleTickerProvid
   late TabController _tabController;
   final List<Kontak> _daftarKontak = [];
 
+  // Tugas 6: StreamController untuk pencarian real-time
+  final StreamController<String> _searchController = StreamController<String>.broadcast();
+
   @override
   void initState() {
     super.initState();
@@ -59,6 +63,7 @@ class _HalamanBerandaState extends State<HalamanBeranda> with SingleTickerProvid
   @override
   void dispose() {
     _tabController.dispose();
+    _searchController.close(); // Tugas 6: Mencegah memory leak
     super.dispose();
   }
 
@@ -72,6 +77,7 @@ class _HalamanBerandaState extends State<HalamanBeranda> with SingleTickerProvid
       setState(() {
         _daftarKontak.add(result);
       });
+      _searchController.add(''); // Refresh tampilan stream
     }
   }
 
@@ -85,6 +91,7 @@ class _HalamanBerandaState extends State<HalamanBeranda> with SingleTickerProvid
     setState(() {
       _daftarKontak.remove(kontak);
     });
+    _searchController.add('');
   }
 
   @override
@@ -155,7 +162,42 @@ class _HalamanBerandaState extends State<HalamanBeranda> with SingleTickerProvid
       body: TabBarView(
         controller: _tabController,
         children: [
-          _buildDaftarKontak(_daftarKontak, tampilkanHapus: true),
+          // Tugas 6: Tab Kontak dengan TextField Pencarian Real-time & StreamBuilder
+          Column(
+            children: [
+              Padding(
+                padding: const EdgeInsets.all(12.0),
+                child: TextField(
+                  decoration: const InputDecoration(
+                    labelText: 'Cari Nama / Kategori',
+                    prefixIcon: Icon(Icons.search),
+                    border: OutlineInputBorder(),
+                  ),
+                  onChanged: (teks) {
+                    _searchController.add(teks); // Mengirim input ketikan ke Stream
+                  },
+                ),
+              ),
+              Expanded(
+                child: StreamBuilder<String>(
+                  stream: _searchController.stream,
+                  builder: (context, snapshot) {
+                    String kataKunci = (snapshot.data ?? '').toLowerCase();
+
+                    // Filter list berdasarkan nama ATAU kategori (case-insensitive)
+                    final daftarHasilCari = _daftarKontak.where((k) {
+                      final matchNama = k.nama.toLowerCase().contains(kataKunci);
+                      final matchKategori = (k.kategori ?? '').toLowerCase().contains(kataKunci);
+                      return matchNama || matchKategori;
+                    }).toList();
+
+                    return _buildDaftarKontak(daftarHasilCari, tampilkanHapus: true);
+                  },
+                ),
+              ),
+            ],
+          ),
+          // Tab 2: Favorit
           _buildDaftarKontak(favoritList, tampilkanHapus: false),
         ],
       ),
@@ -169,7 +211,7 @@ class _HalamanBerandaState extends State<HalamanBeranda> with SingleTickerProvid
 
   Widget _buildDaftarKontak(List<Kontak> data, {required bool tampilkanHapus}) {
     if (data.isEmpty) {
-      return const Center(child: Text('Belum ada kontak'));
+      return const Center(child: Text('Tidak ada kontak ditemukan'));
     }
 
     return ListView.builder(
@@ -177,6 +219,7 @@ class _HalamanBerandaState extends State<HalamanBeranda> with SingleTickerProvid
       itemBuilder: (context, index) {
         final kontak = data[index];
         return ListTile(
+          // Tugas 3: Avatar Inisial
           leading: CircleAvatar(
             backgroundColor: Colors.blue,
             child: Text(
@@ -185,6 +228,7 @@ class _HalamanBerandaState extends State<HalamanBeranda> with SingleTickerProvid
             ),
           ),
           title: Text(kontak.nama, style: const TextStyle(fontWeight: FontWeight.bold)),
+          // Tugas 4: Null-aware Operator (??)
           subtitle: Text(
             '${kontak.telepon} | ${kontak.email}\nKategori: ${kontak.kategori ?? 'Tanpa kategori'}',
           ),
@@ -211,7 +255,7 @@ class _HalamanBerandaState extends State<HalamanBeranda> with SingleTickerProvid
   }
 }
 
-// ================= HALAMAN TAMBAH KONTAK (TUGAS 5: FORM & VALIDASI) =================
+// ================= HALAMAN TAMBAH KONTAK (TUGAS 5) =================
 class HalamanTambahKontak extends StatefulWidget {
   const HalamanTambahKontak({super.key});
 
@@ -220,7 +264,6 @@ class HalamanTambahKontak extends StatefulWidget {
 }
 
 class _HalamanTambahKontakState extends State<HalamanTambahKontak> {
-  // 1. GlobalKey untuk FormState
   final _formKey = GlobalKey<FormState>();
 
   final TextEditingController namaController = TextEditingController();
@@ -238,7 +281,6 @@ class _HalamanTambahKontakState extends State<HalamanTambahKontak> {
   }
 
   void _simpan() {
-    // 2. Mengecek apakah seluruh validator bernilai true
     if (_formKey.currentState!.validate()) {
       String? katInput = kategoriController.text.trim();
       if (katInput.isEmpty) {
@@ -268,12 +310,10 @@ class _HalamanTambahKontakState extends State<HalamanTambahKontak> {
       body: Padding(
         padding: const EdgeInsets.all(16.0),
         child: SingleChildScrollView(
-          // 3. Dibungkus dengan Widget Form
           child: Form(
             key: _formKey,
             child: Column(
               children: [
-                // 4. TextFormField Nama (Wajib Diisi)
                 TextFormField(
                   controller: namaController,
                   decoration: const InputDecoration(labelText: 'Nama Lengkap'),
@@ -285,7 +325,6 @@ class _HalamanTambahKontakState extends State<HalamanTambahKontak> {
                   },
                 ),
                 const SizedBox(height: 12),
-                // 5. TextFormField Email (Wajib Diisi & Mengandung '@')
                 TextFormField(
                   controller: emailController,
                   keyboardType: TextInputType.emailAddress,
@@ -301,7 +340,6 @@ class _HalamanTambahKontakState extends State<HalamanTambahKontak> {
                   },
                 ),
                 const SizedBox(height: 12),
-                // 6. TextFormField No HP (Wajib Angka & Min 10 Digit)
                 TextFormField(
                   controller: noHpController,
                   keyboardType: TextInputType.phone,
@@ -320,7 +358,6 @@ class _HalamanTambahKontakState extends State<HalamanTambahKontak> {
                   },
                 ),
                 const SizedBox(height: 12),
-                // 7. Input Kategori (Opsional / Tanpa Validator)
                 TextFormField(
                   controller: kategoriController,
                   decoration: const InputDecoration(
