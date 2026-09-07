@@ -12,12 +12,33 @@ class MyApp extends StatelessWidget {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
       title: 'Buku Kontak',
-      theme: ThemeData(primarySwatch: Colors.blue),
+      theme: ThemeData(
+        useMaterial3: true,
+        colorScheme: ColorScheme.fromSeed(seedColor: Colors.blue),
+      ),
       home: const HalamanBeranda(),
     );
   }
 }
 
+// ================= MODEL KONTAK (TUGAS 4: NULL SAFETY) =================
+class Kontak {
+  String nama;
+  String email;
+  String telepon;
+  String? kategori; // Properti baru bertipe Nullable (String?)
+  bool favorit;
+
+  Kontak({
+    required this.nama,
+    required this.email,
+    required this.telepon,
+    this.kategori, // Bersifat opsional (tidak wajib diisi)
+    this.favorit = false,
+  });
+}
+
+// ================= HALAMAN BERANDA =================
 class HalamanBeranda extends StatefulWidget {
   const HalamanBeranda({super.key});
 
@@ -25,11 +46,9 @@ class HalamanBeranda extends StatefulWidget {
   State<HalamanBeranda> createState() => _HalamanBerandaState();
 }
 
-class _HalamanBerandaState extends State<HalamanBeranda>
-    with SingleTickerProviderStateMixin {
+class _HalamanBerandaState extends State<HalamanBeranda> with SingleTickerProviderStateMixin {
   late TabController _tabController;
-  List<Map<String, String>> kontak = [];
-  List<Map<String, String>> favorit = [];
+  final List<Kontak> _daftarKontak = [];
 
   @override
   void initState() {
@@ -43,8 +62,35 @@ class _HalamanBerandaState extends State<HalamanBeranda>
     super.dispose();
   }
 
+  Future<void> _bukaTambahKontak() async {
+    final result = await Navigator.push(
+      context,
+      MaterialPageRoute(builder: (context) => const HalamanTambahKontak()),
+    );
+
+    if (result != null && result is Kontak) {
+      setState(() {
+        _daftarKontak.add(result);
+      });
+    }
+  }
+
+  void _toggleFavorit(Kontak kontak) {
+    setState(() {
+      kontak.favorit = !kontak.favorit;
+    });
+  }
+
+  void _hapusKontak(Kontak kontak) {
+    setState(() {
+      _daftarKontak.remove(kontak);
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
+    final favoritList = _daftarKontak.where((k) => k.favorit).toList();
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('BUKU KONTAK'),
@@ -66,10 +112,7 @@ class _HalamanBerandaState extends State<HalamanBeranda>
           children: [
             const DrawerHeader(
               decoration: BoxDecoration(color: Colors.blue),
-              child: Text(
-                'BUKU KONTAK',
-                style: TextStyle(color: Colors.white, fontSize: 24),
-              ),
+              child: Text('BUKU KONTAK', style: TextStyle(color: Colors.white, fontSize: 24)),
             ),
             ListTile(
               leading: const Icon(Icons.person),
@@ -82,19 +125,9 @@ class _HalamanBerandaState extends State<HalamanBeranda>
             ListTile(
               leading: const Icon(Icons.add),
               title: const Text('Tambah Kontak'),
-              onTap: () async {
+              onTap: () {
                 Navigator.pop(context);
-                final result = await Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => const HalamanTambahKontak(),
-                  ),
-                );
-                if (result != null) {
-                  setState(() {
-                    kontak.add(result);
-                  });
-                }
+                _bukaTambahKontak();
               },
             ),
             ListTile(
@@ -112,9 +145,7 @@ class _HalamanBerandaState extends State<HalamanBeranda>
                 Navigator.pop(context);
                 Navigator.push(
                   context,
-                  MaterialPageRoute(
-                    builder: (context) => const HalamanTentang(),
-                  ),
+                  MaterialPageRoute(builder: (context) => const HalamanTentang()),
                 );
               },
             ),
@@ -124,70 +155,65 @@ class _HalamanBerandaState extends State<HalamanBeranda>
       body: TabBarView(
         controller: _tabController,
         children: [
-          kontak.isEmpty
-              ? const Center(child: Text('Belum ada kontak'))
-              : ListView.builder(
-                  itemCount: kontak.length,
-                  itemBuilder: (context, index) {
-                    // Ambil nama spesifik pada indeks saat ini
-                    String namaKontak = kontak[index]['nama']!;
-                    return ListTile(
-                      leading: CircleAvatar(
-                        backgroundColor: Colors.blue,
-                        child: Text(
-                          namaKontak.isNotEmpty
-                              ? namaKontak[0].toUpperCase()
-                              : '?',
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ),
-                      title: Text(namaKontak),
-                      subtitle: Text(
-                        '${kontak[index]['email']!}\n${kontak[index]['noHp']!}',
-                      ),
-                    );
-                  },
-                ),
-          favorit.isEmpty
-              ? const Center(child: Text('Belum ada kontak favorit'))
-              : ListView.builder(
-                  itemCount: favorit.length,
-                  itemBuilder: (context, index) {
-                    return ListTile(
-                      leading: const Icon(Icons.person),
-                      title: Text(favorit[index]['nama']!),
-                      subtitle: Text(
-                        '${favorit[index]['email']!}\n${favorit[index]['noHp']!}',
-                      ),
-                    );
-                  },
-                ),
+          _buildDaftarKontak(_daftarKontak, tampilkanHapus: true),
+          _buildDaftarKontak(favoritList, tampilkanHapus: false),
         ],
       ),
       floatingActionButton: FloatingActionButton(
         backgroundColor: Colors.purple[100],
-        onPressed: () async {
-          final result = await Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (context) => const HalamanTambahKontak(),
-            ),
-          );
-          if (result != null) {
-            setState(() {
-              kontak.add(result);
-            });
-          }
-        },
+        onPressed: _bukaTambahKontak,
         child: const Icon(Icons.add, color: Colors.black87),
       ),
     );
   }
+
+  Widget _buildDaftarKontak(List<Kontak> data, {required bool tampilkanHapus}) {
+    if (data.isEmpty) {
+      return const Center(child: Text('Belum ada kontak'));
+    }
+
+    return ListView.builder(
+      itemCount: data.length,
+      itemBuilder: (context, index) {
+        final kontak = data[index];
+        return ListTile(
+          // Tugas 3: CircleAvatar Inisial
+          leading: CircleAvatar(
+            backgroundColor: Colors.blue,
+            child: Text(
+              kontak.nama.isNotEmpty ? kontak.nama[0].toUpperCase() : '?',
+              style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+            ),
+          ),
+          title: Text(kontak.nama, style: const TextStyle(fontWeight: FontWeight.bold)),
+          // Tugas 4: Penggunaan Null-Aware Operator (??)
+          subtitle: Text(
+            '${kontak.telepon} | ${kontak.email}\nKategori: ${kontak.kategori ?? 'Tanpa kategori'}',
+          ),
+          trailing: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              IconButton(
+                icon: Icon(
+                  kontak.favorit ? Icons.star : Icons.star_border,
+                  color: kontak.favorit ? Colors.amber : Colors.grey,
+                ),
+                onPressed: () => _toggleFavorit(kontak),
+              ),
+              if (tampilkanHapus)
+                IconButton(
+                  icon: const Icon(Icons.delete_outline, color: Colors.red),
+                  onPressed: () => _hapusKontak(kontak),
+                ),
+            ],
+          ),
+        );
+      },
+    );
+  }
 }
 
+// ================= HALAMAN TAMBAH KONTAK =================
 class HalamanTambahKontak extends StatefulWidget {
   const HalamanTambahKontak({super.key});
 
@@ -199,12 +225,14 @@ class _HalamanTambahKontakState extends State<HalamanTambahKontak> {
   final TextEditingController namaController = TextEditingController();
   final TextEditingController emailController = TextEditingController();
   final TextEditingController noHpController = TextEditingController();
+  final TextEditingController kategoriController = TextEditingController(); // Controller Kategori (Tugas 4)
 
   @override
   void dispose() {
     namaController.dispose();
     emailController.dispose();
     noHpController.dispose();
+    kategoriController.dispose();
     super.dispose();
   }
 
@@ -218,42 +246,61 @@ class _HalamanTambahKontakState extends State<HalamanTambahKontak> {
       ),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
-        child: Column(
-          children: [
-            TextField(
-              controller: namaController,
-              decoration: const InputDecoration(labelText: 'Nama Lengkap'),
-            ),
-            TextField(
-              controller: emailController,
-              decoration: const InputDecoration(labelText: 'Email'),
-            ),
-            TextField(
-              controller: noHpController,
-              decoration: const InputDecoration(labelText: 'No Handphone'),
-            ),
-            const SizedBox(height: 20),
-            ElevatedButton(
-              onPressed: () {
-                Navigator.pop(context, {
-                  'nama': namaController.text,
-                  'email': emailController.text,
-                  'noHp': noHpController.text,
-                });
-              },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.purple[50],
-                foregroundColor: Colors.deepPurple,
+        child: SingleChildScrollView(
+          child: Column(
+            children: [
+              TextField(
+                controller: namaController,
+                decoration: const InputDecoration(labelText: 'Nama Lengkap'),
               ),
-              child: const Text('Simpan'),
-            ),
-          ],
+              TextField(
+                controller: emailController,
+                decoration: const InputDecoration(labelText: 'Email'),
+              ),
+              TextField(
+                controller: noHpController,
+                decoration: const InputDecoration(labelText: 'No Handphone'),
+              ),
+              // Input Kategori (Tugas 4 - Boleh Dikosongkan)
+              TextField(
+                controller: kategoriController,
+                decoration: const InputDecoration(
+                  labelText: 'Kategori (Opsional, contoh: Teman, Keluarga, Kerja)',
+                ),
+              ),
+              const SizedBox(height: 20),
+              ElevatedButton(
+                onPressed: () {
+                  String? katInput = kategoriController.text.trim();
+                  if (katInput.isEmpty) {
+                    katInput = null; // Di-set null jika dikosongkan
+                  }
+
+                  Navigator.pop(
+                    context,
+                    Kontak(
+                      nama: namaController.text,
+                      email: emailController.text,
+                      telepon: noHpController.text,
+                      kategori: katInput, // Mengirim data kategori
+                    ),
+                  );
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.purple[50],
+                  foregroundColor: Colors.deepPurple,
+                ),
+                child: const Text('Simpan'),
+              )
+            ],
+          ),
         ),
       ),
     );
   }
 }
 
+// ================= HALAMAN TENTANG =================
 class HalamanTentang extends StatelessWidget {
   const HalamanTentang({super.key});
 
@@ -274,10 +321,7 @@ class HalamanTentang extends StatelessWidget {
               backgroundImage: AssetImage('assets/profil.jpg'),
             ),
             SizedBox(height: 20),
-            Text(
-              'Aldejan Kovic Putra Sulash',
-              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-            ),
+            Text('Aldejan Kovic Putra Sulash', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
             SizedBox(height: 10),
             Text('XII RPL B', style: TextStyle(fontSize: 16)),
             SizedBox(height: 10),
