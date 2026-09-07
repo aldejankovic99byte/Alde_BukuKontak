@@ -25,10 +25,11 @@ class HalamanBeranda extends StatefulWidget {
   State<HalamanBeranda> createState() => _HalamanBerandaState();
 }
 
-class _HalamanBerandaState extends State<HalamanBeranda> with SingleTickerProviderStateMixin {
+class _HalamanBerandaState extends State<HalamanBeranda>
+    with SingleTickerProviderStateMixin {
   late TabController _tabController;
   List<Map<String, String>> kontak = [];
-  List<Map<String, String>> favorit = []; 
+  List<Map<String, String>> favorit = [];
 
   @override
   void initState() {
@@ -65,7 +66,10 @@ class _HalamanBerandaState extends State<HalamanBeranda> with SingleTickerProvid
           children: [
             const DrawerHeader(
               decoration: BoxDecoration(color: Colors.blue),
-              child: Text('BUKU KONTAK', style: TextStyle(color: Colors.white, fontSize: 24)),
+              child: Text(
+                'BUKU KONTAK',
+                style: TextStyle(color: Colors.white, fontSize: 24),
+              ),
             ),
             ListTile(
               leading: const Icon(Icons.person),
@@ -82,7 +86,9 @@ class _HalamanBerandaState extends State<HalamanBeranda> with SingleTickerProvid
                 Navigator.pop(context);
                 final result = await Navigator.push(
                   context,
-                  MaterialPageRoute(builder: (context) => const HalamanTambahKontak()),
+                  MaterialPageRoute(
+                    builder: (context) => const HalamanTambahKontak(),
+                  ),
                 );
                 if (result != null) {
                   setState(() {
@@ -106,7 +112,9 @@ class _HalamanBerandaState extends State<HalamanBeranda> with SingleTickerProvid
                 Navigator.pop(context);
                 Navigator.push(
                   context,
-                  MaterialPageRoute(builder: (context) => const HalamanTentang()),
+                  MaterialPageRoute(
+                    builder: (context) => const HalamanTentang(),
+                  ),
                 );
               },
             ),
@@ -121,10 +129,25 @@ class _HalamanBerandaState extends State<HalamanBeranda> with SingleTickerProvid
               : ListView.builder(
                   itemCount: kontak.length,
                   itemBuilder: (context, index) {
+                    // Ambil nama spesifik pada indeks saat ini
+                    String namaKontak = kontak[index]['nama']!;
                     return ListTile(
-                      leading: const Icon(Icons.person),
-                      title: Text(kontak[index]['nama']!),
-                      subtitle: Text('${kontak[index]['email']!}\n${kontak[index]['noHp']!}'),
+                      leading: CircleAvatar(
+                        backgroundColor: Colors.blue,
+                        child: Text(
+                          namaKontak.isNotEmpty
+                              ? namaKontak[0].toUpperCase()
+                              : '?',
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                      title: Text(namaKontak),
+                      subtitle: Text(
+                        '${kontak[index]['email']!}\n${kontak[index]['noHp']!}',
+                      ),
                     );
                   },
                 ),
@@ -136,7 +159,9 @@ class _HalamanBerandaState extends State<HalamanBeranda> with SingleTickerProvid
                     return ListTile(
                       leading: const Icon(Icons.person),
                       title: Text(favorit[index]['nama']!),
-                      subtitle: Text('${favorit[index]['email']!}\n${favorit[index]['noHp']!}'),
+                      subtitle: Text(
+                        '${favorit[index]['email']!}\n${favorit[index]['noHp']!}',
+                      ),
                     );
                   },
                 ),
@@ -147,7 +172,9 @@ class _HalamanBerandaState extends State<HalamanBeranda> with SingleTickerProvid
         onPressed: () async {
           final result = await Navigator.push(
             context,
-            MaterialPageRoute(builder: (context) => const HalamanTambahKontak()),
+            MaterialPageRoute(
+              builder: (context) => const HalamanTambahKontak(),
+            ),
           );
           if (result != null) {
             setState(() {
@@ -219,7 +246,7 @@ class _HalamanTambahKontakState extends State<HalamanTambahKontak> {
                 foregroundColor: Colors.deepPurple,
               ),
               child: const Text('Simpan'),
-            )
+            ),
           ],
         ),
       ),
@@ -247,7 +274,10 @@ class HalamanTentang extends StatelessWidget {
               backgroundImage: AssetImage('assets/profil.jpg'),
             ),
             SizedBox(height: 20),
-            Text('Aldejan Kovic Putra Sulash', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+            Text(
+              'Aldejan Kovic Putra Sulash',
+              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+            ),
             SizedBox(height: 10),
             Text('XII RPL B', style: TextStyle(fontSize: 16)),
             SizedBox(height: 10),
