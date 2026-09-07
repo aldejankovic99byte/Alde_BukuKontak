@@ -21,19 +21,19 @@ class MyApp extends StatelessWidget {
   }
 }
 
-// ================= MODEL KONTAK (TUGAS 4: NULL SAFETY) =================
+// ================= MODEL KONTAK =================
 class Kontak {
   String nama;
   String email;
   String telepon;
-  String? kategori; // Properti baru bertipe Nullable (String?)
+  String? kategori; // Properti Nullable (Tugas 4)
   bool favorit;
 
   Kontak({
     required this.nama,
     required this.email,
     required this.telepon,
-    this.kategori, // Bersifat opsional (tidak wajib diisi)
+    this.kategori,
     this.favorit = false,
   });
 }
@@ -177,7 +177,6 @@ class _HalamanBerandaState extends State<HalamanBeranda> with SingleTickerProvid
       itemBuilder: (context, index) {
         final kontak = data[index];
         return ListTile(
-          // Tugas 3: CircleAvatar Inisial
           leading: CircleAvatar(
             backgroundColor: Colors.blue,
             child: Text(
@@ -186,7 +185,6 @@ class _HalamanBerandaState extends State<HalamanBeranda> with SingleTickerProvid
             ),
           ),
           title: Text(kontak.nama, style: const TextStyle(fontWeight: FontWeight.bold)),
-          // Tugas 4: Penggunaan Null-Aware Operator (??)
           subtitle: Text(
             '${kontak.telepon} | ${kontak.email}\nKategori: ${kontak.kategori ?? 'Tanpa kategori'}',
           ),
@@ -213,7 +211,7 @@ class _HalamanBerandaState extends State<HalamanBeranda> with SingleTickerProvid
   }
 }
 
-// ================= HALAMAN TAMBAH KONTAK =================
+// ================= HALAMAN TAMBAH KONTAK (TUGAS 5: FORM & VALIDASI) =================
 class HalamanTambahKontak extends StatefulWidget {
   const HalamanTambahKontak({super.key});
 
@@ -222,10 +220,13 @@ class HalamanTambahKontak extends StatefulWidget {
 }
 
 class _HalamanTambahKontakState extends State<HalamanTambahKontak> {
+  // 1. GlobalKey untuk FormState
+  final _formKey = GlobalKey<FormState>();
+
   final TextEditingController namaController = TextEditingController();
   final TextEditingController emailController = TextEditingController();
   final TextEditingController noHpController = TextEditingController();
-  final TextEditingController kategoriController = TextEditingController(); // Controller Kategori (Tugas 4)
+  final TextEditingController kategoriController = TextEditingController();
 
   @override
   void dispose() {
@@ -234,6 +235,26 @@ class _HalamanTambahKontakState extends State<HalamanTambahKontak> {
     noHpController.dispose();
     kategoriController.dispose();
     super.dispose();
+  }
+
+  void _simpan() {
+    // 2. Mengecek apakah seluruh validator bernilai true
+    if (_formKey.currentState!.validate()) {
+      String? katInput = kategoriController.text.trim();
+      if (katInput.isEmpty) {
+        katInput = null;
+      }
+
+      Navigator.pop(
+        context,
+        Kontak(
+          nama: namaController.text.trim(),
+          email: emailController.text.trim(),
+          telepon: noHpController.text.trim(),
+          kategori: katInput,
+        ),
+      );
+    }
   }
 
   @override
@@ -247,52 +268,76 @@ class _HalamanTambahKontakState extends State<HalamanTambahKontak> {
       body: Padding(
         padding: const EdgeInsets.all(16.0),
         child: SingleChildScrollView(
-          child: Column(
-            children: [
-              TextField(
-                controller: namaController,
-                decoration: const InputDecoration(labelText: 'Nama Lengkap'),
-              ),
-              TextField(
-                controller: emailController,
-                decoration: const InputDecoration(labelText: 'Email'),
-              ),
-              TextField(
-                controller: noHpController,
-                decoration: const InputDecoration(labelText: 'No Handphone'),
-              ),
-              // Input Kategori (Tugas 4 - Boleh Dikosongkan)
-              TextField(
-                controller: kategoriController,
-                decoration: const InputDecoration(
-                  labelText: 'Kategori (Opsional, contoh: Teman, Keluarga, Kerja)',
+          // 3. Dibungkus dengan Widget Form
+          child: Form(
+            key: _formKey,
+            child: Column(
+              children: [
+                // 4. TextFormField Nama (Wajib Diisi)
+                TextFormField(
+                  controller: namaController,
+                  decoration: const InputDecoration(labelText: 'Nama Lengkap'),
+                  validator: (value) {
+                    if (value == null || value.trim().isEmpty) {
+                      return 'Nama wajib diisi';
+                    }
+                    return null;
+                  },
                 ),
-              ),
-              const SizedBox(height: 20),
-              ElevatedButton(
-                onPressed: () {
-                  String? katInput = kategoriController.text.trim();
-                  if (katInput.isEmpty) {
-                    katInput = null; // Di-set null jika dikosongkan
-                  }
-
-                  Navigator.pop(
-                    context,
-                    Kontak(
-                      nama: namaController.text,
-                      email: emailController.text,
-                      telepon: noHpController.text,
-                      kategori: katInput, // Mengirim data kategori
-                    ),
-                  );
-                },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.purple[50],
-                  foregroundColor: Colors.deepPurple,
+                const SizedBox(height: 12),
+                // 5. TextFormField Email (Wajib Diisi & Mengandung '@')
+                TextFormField(
+                  controller: emailController,
+                  keyboardType: TextInputType.emailAddress,
+                  decoration: const InputDecoration(labelText: 'Email'),
+                  validator: (value) {
+                    if (value == null || value.trim().isEmpty) {
+                      return 'Email wajib diisi';
+                    }
+                    if (!value.contains('@')) {
+                      return 'Email harus mengandung karakter @';
+                    }
+                    return null;
+                  },
                 ),
-                child: const Text('Simpan'),
-              )
-            ],
+                const SizedBox(height: 12),
+                // 6. TextFormField No HP (Wajib Angka & Min 10 Digit)
+                TextFormField(
+                  controller: noHpController,
+                  keyboardType: TextInputType.phone,
+                  decoration: const InputDecoration(labelText: 'No Handphone'),
+                  validator: (value) {
+                    if (value == null || value.trim().isEmpty) {
+                      return 'No Handphone wajib diisi';
+                    }
+                    if (!RegExp(r'^[0-9]+$').hasMatch(value)) {
+                      return 'No Handphone hanya boleh berisi angka';
+                    }
+                    if (value.length < 10) {
+                      return 'No Handphone minimal 10 digit';
+                    }
+                    return null;
+                  },
+                ),
+                const SizedBox(height: 12),
+                // 7. Input Kategori (Opsional / Tanpa Validator)
+                TextFormField(
+                  controller: kategoriController,
+                  decoration: const InputDecoration(
+                    labelText: 'Kategori (Opsional, contoh: Teman, Kerja)',
+                  ),
+                ),
+                const SizedBox(height: 24),
+                ElevatedButton(
+                  onPressed: _simpan,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.purple[50],
+                    foregroundColor: Colors.deepPurple,
+                  ),
+                  child: const Text('Simpan'),
+                )
+              ],
+            ),
           ),
         ),
       ),
